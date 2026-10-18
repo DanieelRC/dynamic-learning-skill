@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+node_modules/
+.DS_Store
+# generated learning output when the skill is run inside this repo
+/dynamic-learning/
+video/
