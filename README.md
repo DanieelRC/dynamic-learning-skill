@@ -110,6 +110,7 @@ matrices/tablas DP e intervalos.
 python3 -m unittest discover -s tests          # tests de fetch y build
 python3 scripts/build_deck.py tests/viz-gallery.json /tmp/gallery.html --no-meta
 node scripts/snapshot.cjs /tmp/gallery.html /tmp/shots
+python3 tests/split-trace/trace.py && python3 scripts/build_deck.py tests/split-trace/spec.json /tmp/split.html --no-meta   # traza dividida en partes
 ```
 
 ## Créditos

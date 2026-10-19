@@ -1,0 +1,16 @@
+{
+  "lang": "es",
+  "meta": {"approach": "Orden topológico (Kahn)", "language": "python",
+           "problem": {"id": "207", "title": "Course Schedule", "difficulty": "Medium"}},
+  "slides": [
+    {"type": "trace", "part": 1, "title": "Primero, el grafo de requisitos", "sourceFile": "solution.py", "framesFile": "frames.json",
+     "lines": [1, 8], "folds": [{"lines": [10, 22], "label": "BFS (parte 2)"}]},
+    {"type": "trace", "part": 2, "title": "Después, tomar cursos por capas", "sourceFile": "solution.py", "framesFile": "frames.json",
+     "folds": [{"lines": [3, 8], "label": "grafo e indegree (parte 1)"}]},
+    {"type": "code", "title": "El código completo", "sourceFile": "solution.py",
+     "notes": [{"lines": [6, 8], "text": "Cada arista suma un requisito al curso destino."},
+               {"lines": [11], "text": "Arrancamos con los cursos que no dependen de nadie."},
+               {"lines": [16, 19], "text": "Al tomar un curso liberamos a sus dependientes."},
+               {"lines": [22], "text": "Si quedó alguno sin tomar, había un ciclo."}]}
+  ]
+}

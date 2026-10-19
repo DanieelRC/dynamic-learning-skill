@@ -62,6 +62,9 @@ For each approach, write `src/trace_<approach>.py` with `scripts/tracekit.py` (u
 - Use semantic highlights: `highlight` = being looked at now, `seen` = already processed,
   `ok` = found or accepted, `bad` = rejected, `dim` = discarded for good (binary search halves),
   `window` = the current range.
+- Long algorithm (more than about 20 lines, more than about 30 frames, or clear phases)? Call `t.part("<phase>")` before
+  each phase. Each part becomes its own trace slide, with the code and the diagram still side by side
+  (see "Long algorithms" in `slide-flows.md`).
 - Run it to produce `src/frames-<approach>.json`.
 
 ## Step 6 — Write the deck specs and build

@@ -94,20 +94,73 @@
         return out;
     }
 
-    function codeBlock(source, lang, fit) {
+    // Line ranges: 5, [3, 8] or [[3, 8], [12, 14]] -> sorted list of [a, b]
+    function ranges(spec) {
+        if (spec == null) return [];
+        if (typeof spec === 'number') return [[spec, spec]];
+        if (spec.length && typeof spec[0] === 'number') return [[spec[0], spec[spec.length - 1]]];
+        return spec.map((r) => (typeof r === 'number' ? [r, r] : [r[0], r[r.length - 1]]));
+    }
+
+    /* view (optional): { lines: ranges to show, folds: [{lines: [a, b], label}], foldText(a, b, label) }
+       Hidden lines keep their element (so frames still address original line numbers) and each
+       hidden block is replaced on screen by one fold row. */
+    function codeBlock(source, lang, fit, view) {
         const lines = String(source || '').replace(/\t/g, '    ').replace(/\s+$/, '').split('\n');
+        const n = lines.length;
+        const visible = new Array(n + 2).fill(true);
+        const labels = {};
+        if (view && view.lines) {
+            visible.fill(false);
+            ranges(view.lines).forEach(([a, b]) => { for (let l = a; l <= b; l++) visible[l] = true; });
+        }
+        if (view && view.folds) view.folds.forEach((f) => {
+            const [[a, b]] = ranges(f.lines);
+            for (let l = a; l <= b; l++) visible[l] = false;
+            labels[a] = f.label;
+        });
         const pre = el('div.code', { attrs: { 'data-lang': lang || '' } });
         if (lang) pre.appendChild(el('span.code-lang', { text: lang }));
-        lines.forEach((ln) => pre.appendChild(el('span.ln', { html: highlightLine(ln, lang) || ' ' })));
+        let rows = 0;
+        for (let i = 1; i <= n; i++) {
+            const ln = el('span.ln', { html: highlightLine(lines[i - 1], lang) || ' ', attrs: { 'data-n': i } });
+            if (!visible[i]) {
+                ln.classList.add('hidden');
+                if (i === 1 || visible[i - 1]) {
+                    let b = i;
+                    while (b < n && !visible[b + 1]) b++;
+                    const label = Object.keys(labels).map(Number).filter((k) => k >= i && k <= b).map((k) => labels[k]).join(' · ');
+                    const text = view && view.foldText ? view.foldText(i, b, label) : '⋯ ' + i + '–' + b;
+                    pre.appendChild(el('span.fold', { text }));
+                    rows++;
+                }
+            } else rows++;
+            pre.appendChild(ln);
+        }
+        pre.lines = Array.from(pre.querySelectorAll('.ln'));
         if (fit) {
-            const maxLen = Math.max(...lines.map((l) => l.length), 10);
-            const byH = (fit.height - 52) / lines.length / 1.55;
+            const shown = lines.filter((l, i) => visible[i + 1]);
+            const lens = shown.map((l) => l.length).sort((a, b) => a - b);
+            const typical = lens[Math.floor((lens.length - 1) * 0.85)] || 10;
+            const maxLen = Math.max(typical, Math.min(lens[lens.length - 1] || 10, 56), 10);
+            pre.lines.forEach((ln, i) => { if (lines[i].length > maxLen + 2) ln.classList.add('wrap'); });
+            const byH = (fit.height - 52) / Math.max(rows, 1) / 1.55;
             const byW = (fit.width - 130) / (maxLen * 0.61);
             const fs = Math.max(14, Math.min(fit.max || 30, byH, byW));
             pre.style.fontSize = fs.toFixed(1) + 'px';
             pre.style.lineHeight = (fs * 1.55).toFixed(1) + 'px';
         }
         pre.lines = Array.from(pre.querySelectorAll('.ln'));
+        // Measured fit, once the block is laid out: shrink until every visible line fits its box
+        pre.fit = () => {
+            if (!pre.clientHeight) return;
+            let fs = parseFloat(pre.style.fontSize) || 24;
+            while ((pre.scrollHeight > pre.clientHeight + 1 || pre.scrollWidth > pre.clientWidth + 1) && fs > 13) {
+                fs -= 0.5;
+                pre.style.fontSize = fs + 'px';
+                pre.style.lineHeight = (fs * 1.55).toFixed(1) + 'px';
+            }
+        };
         return pre;
     }
 
@@ -124,7 +177,7 @@
             sec_trace: 'Paso a paso', sec_code: 'Código', sec_complexity: 'Complejidad', sec_compare: 'Comparación',
             sec_quiz: 'Pon a prueba', sec_hints: 'Pistas', sec_checkpoint: 'Checkpoint', sec_related: 'Para practicar',
             sec_summary: 'Resumen', sec_bullets: 'Idea', sec_diagram: 'Visualízalo', sec_next: 'Siguiente paso',
-            fullscreen: 'Pantalla completa', autoplay: 'Autoplay'
+            fullscreen: 'Pantalla completa', part: 'Parte', lines: 'líneas', autoplay: 'Autoplay'
         },
         en: {
             step: 'Step', of: 'of', play: 'Play', pause: 'Pause', prev: 'Previous', next: 'Next',
@@ -137,7 +190,7 @@
             sec_trace: 'Step by step', sec_code: 'Code', sec_complexity: 'Complexity', sec_compare: 'Comparison',
             sec_quiz: 'Check yourself', sec_hints: 'Hints', sec_checkpoint: 'Checkpoint', sec_related: 'Practice next',
             sec_summary: 'Summary', sec_bullets: 'Idea', sec_diagram: 'Picture it', sec_next: 'Next step',
-            fullscreen: 'Fullscreen', autoplay: 'Autoplay'
+            fullscreen: 'Fullscreen', part: 'Part', lines: 'lines', autoplay: 'Autoplay'
         },
         pt: {
             step: 'Passo', of: 'de', play: 'Reproduzir', pause: 'Pausar', prev: 'Anterior', next: 'Próximo',
@@ -150,7 +203,7 @@
             sec_trace: 'Passo a passo', sec_code: 'Código', sec_complexity: 'Complexidade', sec_compare: 'Comparação',
             sec_quiz: 'Teste-se', sec_hints: 'Dicas', sec_checkpoint: 'Checkpoint', sec_related: 'Para praticar',
             sec_summary: 'Resumo', sec_bullets: 'Ideia', sec_diagram: 'Visualize', sec_next: 'Próximo passo',
-            fullscreen: 'Tela cheia', autoplay: 'Autoplay'
+            fullscreen: 'Tela cheia', part: 'Parte', lines: 'linhas', autoplay: 'Autoplay'
         },
         fr: {
             step: 'Étape', of: 'sur', play: 'Lecture', pause: 'Pause', prev: 'Précédent', next: 'Suivant',
@@ -163,7 +216,7 @@
             sec_trace: 'Pas à pas', sec_code: 'Code', sec_complexity: 'Complexité', sec_compare: 'Comparaison',
             sec_quiz: 'Testez-vous', sec_hints: 'Indices', sec_checkpoint: 'Checkpoint', sec_related: 'À pratiquer',
             sec_summary: 'Résumé', sec_bullets: 'Idée', sec_diagram: 'Visualisez', sec_next: 'Étape suivante',
-            fullscreen: 'Plein écran', autoplay: 'Autoplay'
+            fullscreen: 'Plein écran', part: 'Partie', lines: 'lignes', autoplay: 'Autoplay'
         }
     };
 
@@ -172,5 +225,5 @@
         return Object.assign({}, I18N.en, I18N[base] || {}, overrides || {});
     }
 
-    window.DL = { esc, md, mono, sup, el, svg, highlightLine, codeBlock, uiFor, I18N };
+    window.DL = { esc, md, mono, sup, el, svg, highlightLine, codeBlock, ranges, uiFor, I18N };
 })();

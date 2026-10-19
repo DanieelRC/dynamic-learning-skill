@@ -65,8 +65,8 @@ def validate(spec):
                 errors.append(f"{where}: answer index out of range")
         if t in ("trace", "code") and "source" in s:
             n_lines = len(str(s["source"]).rstrip().split("\n"))
-            if n_lines > 32:
-                warnings.append(f"{where}: {n_lines} code lines; >32 gets small. Trim comments or split.")
+            if len(visible_lines(s, n_lines)) > 32:
+                warnings.append(f"{where}: {n_lines} code lines shown; >32 gets small. Fold parts with \"lines\"/\"folds\" or split.")
             notes = s.get("notes", [])
             note_chars = sum(len(str(n.get("text", ""))) for n in notes)
             if len(notes) > 5 or note_chars > 480:
@@ -77,6 +77,8 @@ def validate(spec):
                 for ln in ([n.get("lines")] if isinstance(n.get("lines"), int) else n.get("lines", [])):
                     if not 1 <= ln <= n_lines:
                         errors.append(f"{where} note {j}: line {ln} outside 1..{n_lines}")
+                    elif ln not in visible_lines(s, n_lines):
+                        errors.append(f"{where} note {j}: line {ln} is folded/hidden on this slide")
         if t == "trace":
             n_lines = len(str(s.get("source", "")).rstrip().split("\n"))
             frames = s.get("frames", [])
@@ -84,11 +86,20 @@ def validate(spec):
                 errors.append(f"{where}: frames is empty")
             if len(frames) > 40:
                 warnings.append(f"{where}: {len(frames)} frames; consider a smaller example (<= 30)")
+            shown = visible_lines(s, n_lines)
+            if len(shown) > 24:
+                warnings.append(f"{where}: {len(shown)} visible code lines. Split the trace into parts "
+                                "(tracekit t.part() + \"part\": n) and show each phase with \"lines\"/\"folds\"")
+            if "part" in s and not frames:
+                errors.append(f"{where}: no frames recorded for part {s['part']} (check t.part() in the tracer)")
             for j, f in enumerate(frames, 1):
                 lines = f.get("line")
                 for ln in ([lines] if isinstance(lines, int) else (lines or [])):
                     if not isinstance(ln, int) or not 1 <= ln <= n_lines:
                         errors.append(f"{where} frame {j}: line {ln} outside 1..{n_lines}")
+                    elif ln not in shown:
+                        errors.append(f"{where} frame {j}: line {ln} is folded/hidden on this slide; "
+                                      "show it with \"lines\" or move the frame to another part")
                 if not f.get("note"):
                     warnings.append(f"{where} frame {j}: no note (narration helps learners and video)")
                 check_viz(f.get("viz", []), f"{where} frame {j}", errors)
@@ -110,13 +121,70 @@ def check_viz(comps, where, errors):
             errors.append(f"{where}: unknown viz type '{typ}'. Valid: {sorted(VIZ_TYPES)}")
 
 
+def materialize(frames):
+    """Resolve component/var carry-over so every frame holds the full state (needed to split parts)."""
+    out, carry, cvars, part = [], [], {}, None
+    key = lambda c: (c.get("name") or c.get("type"), c.get("type", "array"))
+    for f in frames:
+        if f.get("part") != part:
+            cvars, part = {}, f.get("part")
+        comps = [] if f.get("reset") else list(carry)
+        for c in f.get("viz") or []:
+            idx = next((i for i, x in enumerate(comps) if key(x) == key(c)), None)
+            if c.get("remove"):
+                if idx is not None:
+                    comps.pop(idx)
+                continue
+            if idx is None:
+                comps.append(c)
+            else:
+                comps[idx] = c
+        v = dict(f.get("vars") or {}) if f.get("resetVars") else {**cvars, **(f.get("vars") or {})}
+        g = {k: val for k, val in f.items() if k not in ("viz", "vars", "reset", "resetVars")}
+        g.update(viz=comps, vars=v, reset=True, resetVars=True)
+        out.append(g)
+        carry, cvars = comps, v
+    return out
+
+
 def resolve_includes(spec, base):
-    """A trace slide may load its frames from a tracekit file: "framesFile": "frames-optimal.json"."""
+    """Load "framesFile" / "sourceFile" and split traces by "part" (frames recorded with tracekit's t.part())."""
+    cache = {}
     for s in spec.get("slides", []):
-        if s.get("type") == "trace" and "framesFile" in s and "frames" not in s:
-            s["frames"] = json.loads((base / s.pop("framesFile")).read_text(encoding="utf-8"))
         if s.get("type") in ("trace", "code") and "sourceFile" in s and "source" not in s:
             s["source"] = (base / s.pop("sourceFile")).read_text(encoding="utf-8")
+        if s.get("type") == "trace" and "framesFile" in s and "frames" not in s:
+            name = s.pop("framesFile")
+            if name not in cache:
+                cache[name] = json.loads((base / name).read_text(encoding="utf-8"))
+            frames = cache[name]
+            if "part" in s:
+                parts = sorted({f.get("part") for f in frames if f.get("part")})
+                full = materialize(frames)
+                mine = [f for f in full if f.get("part") == s["part"]]
+                s["parts"] = len(parts)
+                if mine and not s.get("partLabel"):
+                    s["partLabel"] = mine[0].get("partLabel")
+                s["frames"] = mine
+            else:
+                s["frames"] = frames
+
+
+def visible_lines(s, n_lines):
+    """Lines shown on a slide that uses "lines" and/or "folds"."""
+    def rng(spec):
+        if spec is None:
+            return []
+        if isinstance(spec, int):
+            return [(spec, spec)]
+        if spec and isinstance(spec[0], int):
+            return [(spec[0], spec[-1])]
+        return [(r, r) if isinstance(r, int) else (r[0], r[-1]) for r in spec]
+    shown = set(range(1, n_lines + 1)) if s.get("lines") is None else {l for a, b in rng(s["lines"]) for l in range(a, b + 1)}
+    for f in s.get("folds", []):
+        for a, b in rng(f.get("lines")):
+            shown -= set(range(a, b + 1))
+    return shown
 
 
 def safe_json(obj):

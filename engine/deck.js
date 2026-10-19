@@ -12,6 +12,7 @@
 (function () {
     'use strict';
     const { el, md, mono, codeBlock, uiFor } = window.DL;
+    const foldText = (a, b, label) => `⋯ L${a}–${b}` + (label ? ' · ' + label : '');
 
     const SPEC = JSON.parse(document.getElementById('deck-spec').textContent);
     const UI = uiFor(SPEC.lang, SPEC.ui);
@@ -166,7 +167,7 @@
     R.code = (s) => {
         const { section, inner } = frame(s, '', UI.sec_code);
         const notes = s.notes || [];
-        const code = codeBlock(s.source, s.language || META.language, { width: notes.length ? 1010 : 1696, height: 700, max: 30 });
+        const code = codeBlock(s.source, s.language || META.language, { width: notes.length ? 1010 : 1696, height: 700, max: 30 }, { lines: s.lines, folds: s.folds, foldText });
         let body = code;
         if (s.spoiler) {
             const sp = el('div.spoiler', {}, [el('div.spoiler-body', {}, [code])]);
@@ -223,7 +224,7 @@
             },
             dwell(i) { return i === 0 ? readMs(s.source, 3500) * 0.6 : readMs((notes[i - offset - 1] || {}).text, 2600); }
         };
-        return { section, stepper: stepper.steps > 1 ? stepper : null, onEnter: () => fitNotes(stepper.at - offset - 1) };
+        return { section, stepper: stepper.steps > 1 ? stepper : null, onEnter: () => { code.fit(); fitNotes(stepper.at - offset - 1); } };
     };
 
     /* ----- trace: code + animated diagram, synced line by line ----- */
@@ -233,7 +234,10 @@
         section.appendChild(inner);
         const head = el('div.trace-head', {}, [
             el('div', {}, [
-                el('div.eyebrow', { html: md(s.eyebrow != null ? s.eyebrow : UI.sec_trace) }),
+                el('div.eyebrow', {}, [
+                    el('span', { html: md(s.eyebrow != null ? s.eyebrow : UI.sec_trace) }),
+                    s.part ? el('span.part', { text: ` · ${UI.part} ${s.part}/${s.parts || s.part}` + (s.partLabel ? ' · ' + s.partLabel : '') }) : null
+                ]),
                 el('h2', { html: md(s.title || '') })
             ])
         ]);
@@ -250,7 +254,7 @@
         head.appendChild(stepperUi);
         inner.appendChild(head);
 
-        const code = codeBlock(s.source, s.language || META.language, { width: 820, height: 640, max: 28 });
+        const code = codeBlock(s.source, s.language || META.language, { width: 820, height: 640, max: 28 }, { lines: s.lines, folds: s.folds, foldText });
         code.classList.add('focus');
         const viz = el('div.viz');
         const vizPane = el('div.viz-pane', {}, [viz]);
@@ -320,7 +324,7 @@
             dwell(i) { return readMs((frames[i] || {}).note, 1900); },
             leave: stop
         };
-        return { section, stepper };
+        return { section, stepper, onEnter: () => code.fit() };
     };
 
     R.complexity = (s) => {

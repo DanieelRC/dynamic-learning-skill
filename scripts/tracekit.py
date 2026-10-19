@@ -18,6 +18,10 @@ the learner chose), so keep the mirror in sync with that listing.
 
 Components are plain dicts, so anything the engine supports can also be
 passed directly. Values are deep-copied at every step.
+
+Long algorithms: call `t.part("Construir el grafo")` before each phase. Each part
+becomes its own trace slide ("part": 1, 2, ... in the deck spec, same framesFile);
+the diagram state carries over from one part to the next.
 """
 import copy
 import json
@@ -112,13 +116,27 @@ def text(name, value, label=None):
 class Tracer:
     def __init__(self, max_frames=40):
         self.frames = []
-        self.max_frames = max_frames
+        self.max_frames = max_frames  # per part
+        self._part = 0
+        self._label = None
+        self._in_part = 0
+
+    def part(self, label):
+        """Start a new phase; it becomes its own trace slide."""
+        self._part += 1
+        self._label = label
+        self._in_part = 0
 
     def step(self, line, note, vars=None, viz=None, reset=False):
         """line: int or [int, ...] of the displayed listing (1-based)."""
-        if len(self.frames) >= self.max_frames:
-            raise RuntimeError(f"More than {self.max_frames} frames: use a smaller example")
+        if self._in_part >= self.max_frames:
+            raise RuntimeError(f"More than {self.max_frames} frames in one part: use a smaller example or split with t.part()")
+        self._in_part += 1
         frame = {"line": line, "note": note}
+        if self._part:
+            frame["part"] = self._part
+            if self._in_part == 1:
+                frame["partLabel"] = self._label
         if vars:
             frame["vars"] = copy.deepcopy(vars)
         if viz:

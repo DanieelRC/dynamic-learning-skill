@@ -12,7 +12,7 @@ Keep decks short: 10–14 slides each. One idea per slide, with at most 4–5 bu
 | 4 | `constraints` | **every** constraint with its `insight` (what it allows or forbids), `ops` bars, `takeaway` with the target complexity |
 | 5 | `interview` | clarifying questions to ask the interviewer (duplicates? empty input? sorted? return format?) |
 | 6 | `idea` | the brute-force idea in 3 bullets plus a `callout` on the key detail |
-| 7 | `trace` | animated walk on the small example (`sourceFile` + `framesFile`) |
+| 7 | `trace` | animated walk on the small example (`sourceFile` + `framesFile`); split it into parts for long algorithms (see below) |
 | 8 | `code` | the listing with 3–5 `notes` on line ranges, each note ≤ 100 characters (one idea) |
 | 9 | `complexity` | time and space with a *why* for each, plus `ops` |
 | 10 | `bullets` "Why isn't it enough?" | the bottleneck, named precisely; the bridge to the next idea |
@@ -27,7 +27,7 @@ Keep decks short: 10–14 slides each. One idea per slide, with at most 4–5 bu
 | 2 | `constraints` | short reminder of what must be beaten, plus `ops` comparing the approaches |
 | 3 | `pattern` | how to **recognize** the pattern (signals) plus a `code` template and a `callout` on where else it appears |
 | 4 | `diagram` | the key insight as one static picture (`viz`) with `lead` and `caption` |
-| 5 | `trace` | the animated walk (same example as brute force, when possible) |
+| 5 | `trace` | the animated walk (same example as brute force, when possible); one slide per phase for long algorithms |
 | 6 | `code` | annotated listing (3–5 notes, ≤ 100 characters each) |
 | 7 | `bullets` | edge cases and what the code does with each |
 | 8 | `complexity` | time and space with explanations |
@@ -38,6 +38,32 @@ Keep decks short: 10–14 slides each. One idea per slide, with at most 4–5 bu
 | 13 | `summary` | 4 numbered takeaways, a one-line `takeaway`, and links to the other decks |
 
 An intermediate approach (neither brute nor final) can drop `related` and `summary` and end with `next`.
+
+## Long algorithms: split the trace by phases
+
+The learner must always see **the code and its behavior side by side**. When an algorithm is too big for one
+trace slide, split it into parts instead of shrinking it. Never move the code to one slide and the diagram
+to another.
+
+Split when any of these is true:
+- more than about 20 lines would be visible;
+- more than about 30 frames;
+- the algorithm has clear phases (build the graph → BFS; preprocess or sort → main loop; helper `dfs` → caller;
+  fill the DP table → reconstruct the answer).
+
+How:
+1. In the tracer, call `t.part("<phase name>")` before each phase. The diagram state carries over, so part 2
+   starts exactly where part 1 ended.
+2. Write one `trace` slide per part, all with the same `sourceFile` and `framesFile`, plus `"part": n`.
+3. On each one, show only that phase's code. Use `"lines": [a, b]` to show a range, or
+   `"folds": [{"lines": [a, b], "label": "…"}]` to collapse the other phases into one labeled row
+   (`⋯ L3–8 · build the graph (part 1)`). Keep the function signature visible for context.
+   Line numbers stay those of the full listing.
+4. Give each part a title that states the phase. The eyebrow shows `Part 1/3 · <phase>` automatically.
+5. After the parts, the `code` slide shows the full listing, with notes on each phase.
+
+2–4 parts per approach, 5–15 frames each. `build_deck.py` rejects a frame whose line is folded on its slide,
+and warns when more than 24 lines are visible.
 
 ## `00-practice.html` (kind `practice`, order 0)
 

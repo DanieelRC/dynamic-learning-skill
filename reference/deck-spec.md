@@ -43,8 +43,8 @@ All text fields accept: `` `code` ``, `**bold**`, `*em*` (cyan), `==mark==`, `[l
 | `constraints` | `items[{rule, insight}]`, `ops[{label, value, note}]`, `takeaway` | `value` = estimated operations at max n; the bar turns red above 10⁸ |
 | `bullets` / `idea` / `intuition` / `pattern` / `interview` | `lead`, `items[]`, `numbered`, `code` *or* `aside` (callout), `callout` | `code`/`aside` opens a right-hand column |
 | `diagram` | `viz[components]`, `lead`, `caption` | one static picture; see `visualizers.md` |
-| `trace` | `source` *or* `sourceFile`, `language`, `frames` *or* `framesFile` | the animated walk: code on the left, diagram on the right, narration at the bottom |
-| `code` | `source` *or* `sourceFile`, `language`, `notes[{lines: [a, b] \| n, text}]`, `spoiler` | arrows step through the notes and highlight their lines; `spoiler` blurs until revealed |
+| `trace` | `source` *or* `sourceFile`, `language`, `frames` *or* `framesFile`, `part`, `lines`, `folds` | the animated walk: code on the left, diagram on the right, narration at the bottom. `part: n` takes the frames of tracekit part n |
+| `code` | `source` *or* `sourceFile`, `language`, `notes[{lines: [a, b] \| n, text}]`, `spoiler`, `lines`, `folds` | arrows step through the notes and highlight their lines; `spoiler` blurs until revealed |
 | `complexity` | `time`, `space`, `timeWhy`, `spaceWhy`, `ops`, `callout` | |
 | `compare` | `rows[{approach, time, space, note, current}]`, `callout` | |
 | `quiz` | `question`, `options[]`, `answer` (0-based index), `explanation` | click an option, or press → to reveal |
@@ -54,6 +54,17 @@ All text fields accept: `` `code` ``, `**bold**`, `*em*` (cyan), `==mark==`, `[l
 | `summary` | `items[]`, `takeaway`, `links[]` | |
 
 `callout` everywhere is either a string or `{icon, text, tone}`, where `tone` is `accent | info | ok | bad`.
+
+## Code windows (`lines`, `folds`)
+
+On `trace` and `code` slides:
+- `"lines": [a, b]` or `[[a, b], [c, d]]` shows only those lines;
+- `"folds": [{"lines": [a, b], "label": "build the graph (part 1)"}]` collapses a range into one row:
+  `⋯ La–b · label`.
+
+Hidden lines keep their original numbers, so frames and notes still use the line numbers of the full
+listing. Unusually long lines (such as platform signatures) wrap with a hanging indent instead of shrinking
+the whole block.
 
 ## Trace frames
 
@@ -71,6 +82,8 @@ All text fields accept: `` `code` ``, `**bold**`, `*em*` (cyan), `==mark==`, `[l
   `"reset": true` starts from an empty diagram.
 - `vars` merge into the previous frame's vars (chips that changed glow); `"resetVars": true` replaces them.
 - Recommended: generate frames with `scripts/tracekit.py` (`framesFile`), not by hand.
+- Parts: frames recorded after `t.part(label)` carry `part`/`partLabel`. A slide with `"part": n` gets only
+  those frames, with the full diagram state at that point; vars start fresh in each part.
 - Limits: up to 32 code lines and 40 frames per trace (the validator warns earlier).
 
 ## Fitting on screen
