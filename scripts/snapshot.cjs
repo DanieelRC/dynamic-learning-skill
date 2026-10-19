@@ -45,23 +45,38 @@ function loadPlaywright() {
             const name = `${String(i + 1).padStart(2, '0')}-${info.type}${shots.length > 1 ? '-step' + String(s + 1).padStart(2, '0') : ''}.png`;
             await page.screenshot({ path: path.join(outDir, name) });
         }
-        // Content that spills out of the 1920x1080 slide or out of its panels
-        const spill = await page.evaluate((i) => {
-            const sec = window.DLDeck.slides[i].section;
-            const box = sec.getBoundingClientRect();
-            const bad = [];
-            sec.querySelectorAll('.slide-inner > *, .viz-pane, .viz, .code, .narration, .hints').forEach((n) => {
-                const b = n.getBoundingClientRect();
+        // Check every step: content that spills out of the slide, gets clipped inside a box,
+        // or only fits because the engine auto-shrank it (the text should be shortened instead)
+        const spill = await page.evaluate(async (i) => {
+            const r = window.DLDeck.slides[i];
+            const sec = r.section;
+            const bad = new Set();
+            const steps = r.stepper ? r.stepper.steps : 1;
+            for (let s = 0; s < steps; s++) {
+                if (r.stepper) { r.stepper.set(s); window.DLDeck.fit(r); }
+                await new Promise((res) => setTimeout(res, 60));
+                const box = sec.getBoundingClientRect();
                 const limit = sec.classList.contains('trace-slide') ? 30 : 70;
-                if (b.bottom > box.bottom - limit || b.right > box.right + 1) bad.push(n.className || n.tagName);
-                if (n.scrollHeight > n.clientHeight + 4 && /viz|narration|hints/.test(n.className)) bad.push(n.className + ' (clipped)');
-            });
-            return bad;
+                sec.querySelectorAll('.slide-inner > *').forEach((n) => {
+                    const b = n.getBoundingClientRect();
+                    if (b.bottom > box.bottom - limit || b.right > box.right + 1) bad.add((n.className || n.tagName) + ' (off-slide)');
+                });
+                sec.querySelectorAll('.slide-inner *').forEach((n) => {
+                    if (!n.clientHeight || n.closest('.ptrs, .bar')) return;
+                    const ov = getComputedStyle(n).overflowY;
+                    if (ov === 'visible') return;
+                    if (n.closest('.notes.compact, .hints.compact')) return;
+                    if (n.scrollHeight > n.clientHeight + 3 || n.scrollWidth > n.clientWidth + 3) bad.add((String(n.className).split(' ')[0] || n.tagName.toLowerCase()) + ' (clipped' + (r.stepper ? ' at step ' + (s + 1) : '') + ')');
+                });
+                [sec.dataset.autofitNotes, sec.dataset.autofitZoom].filter(Boolean).forEach((a) => bad.add('auto-fit: ' + a));
+            }
+            if (r.stepper) r.stepper.set(steps - 1);
+            return [...bad];
         }, i);
-        if (spill.length) overflow.push(`slide ${i + 1} (${info.type}): ${[...new Set(spill)].join(', ')}`);
+        if (spill.length) overflow.push(`slide ${i + 1} (${info.type}): ${spill.join('; ')}`);
     }
     await browser.close();
     console.log(`${total} slides -> ${outDir}`);
-    if (overflow.length) console.log('LAYOUT WARNINGS:\n  ' + overflow.join('\n  '));
+    if (overflow.length) console.log('LAYOUT WARNINGS (shorten text, split the slide or use a smaller example):\n  ' + overflow.join('\n  '));
     if (errors.length) { console.log('JS ERRORS:\n  ' + errors.join('\n  ')); process.exit(1); }
 })();

@@ -1,0 +1,105 @@
+{
+ "lang": "es",
+ "meta": {
+  "approach": "Ventana deslizante con set",
+  "language": "python",
+  "problem": {
+   "id": "3",
+   "title": "Longest Substring Without Repeating Characters",
+   "difficulty": "Medium"
+  }
+ },
+ "slides": [
+  {
+   "type": "code",
+   "title": "Trece lineas, una sola pasada",
+   "source": "class Solution:\n    def lengthOfLongestSubstring(self, s: str) -> int:\n        vistos = set()\n        izq = 0\n        mejor = 0\n        for der, c in enumerate(s):\n            # Encogemos por la izquierda hasta que `c` ya no se repita\n            while c in vistos:\n                vistos.remove(s[izq])\n                izq += 1\n            vistos.add(c)\n            mejor = max(mejor, der - izq + 1)\n        return mejor",
+   "notes": [
+    {
+     "lines": [
+      3,
+      5
+     ],
+     "text": "`vistos` es el contenido de la ventana, `izq` su extremo izquierdo y `mejor` la respuesta."
+    },
+    {
+     "lines": [
+      6
+     ],
+     "text": "`der` avanza **siempre**: el bucle externo no tiene vuelta atras."
+    },
+    {
+     "lines": [
+      8,
+      10
+     ],
+     "text": "El `while` encoge por la izquierda **solo lo necesario**. Nunca puede pasarse: el propio `c` esta en `vistos`, asi que acaba saliendo."
+    },
+    {
+     "lines": [
+      11
+     ],
+     "text": "Despues del `while`, `c` ya no esta dentro: anadirlo mantiene el invariante de la ventana sin repetidos."
+    },
+    {
+     "lines": [
+      12
+     ],
+     "text": "`der - izq + 1` es el tamano de la ventana actual; nos quedamos con el maximo visto hasta ahora."
+    },
+    {
+     "lines": [
+      13
+     ],
+     "text": "Cada indice entra y sale de la ventana a lo mucho una vez: **O(n)** en total."
+    }
+   ]
+  },
+  {
+   "type": "bullets",
+   "title": "Demasiadas viñetas",
+   "lead": "Texto deliberadamente largo para forzar el desbordamiento de la diapositiva y probar el ajuste automatico del motor",
+   "items": [
+    "Texto deliberadamente largo para forzar el desbordamiento de la diapositiva y probar el ajuste automatico del motor",
+    "Texto deliberadamente largo para forzar el desbordamiento de la diapositiva y probar el ajuste automatico del motor",
+    "Texto deliberadamente largo para forzar el desbordamiento de la diapositiva y probar el ajuste automatico del motor",
+    "Texto deliberadamente largo para forzar el desbordamiento de la diapositiva y probar el ajuste automatico del motor",
+    "Texto deliberadamente largo para forzar el desbordamiento de la diapositiva y probar el ajuste automatico del motor",
+    "Texto deliberadamente largo para forzar el desbordamiento de la diapositiva y probar el ajuste automatico del motor",
+    "Texto deliberadamente largo para forzar el desbordamiento de la diapositiva y probar el ajuste automatico del motor"
+   ],
+   "callout": "Texto deliberadamente largo para forzar el desbordamiento de la diapositiva y probar el ajuste automatico del motor"
+  },
+  {
+   "type": "hints",
+   "title": "Demasiadas pistas",
+   "intro": "Texto deliberadamente largo para forzar el desbordamiento de la diapositiva y probar el ajuste automatico del motor",
+   "hints": [
+    {
+     "title": "Pista",
+     "body": "Texto deliberadamente largo para forzar el desbordamiento de la diapositiva y probar el ajuste automatico del motor Texto deliberadamente largo para forzar el desbordamiento de la diapositiva y probar el ajuste automatico del motor"
+    },
+    {
+     "title": "Pista",
+     "body": "Texto deliberadamente largo para forzar el desbordamiento de la diapositiva y probar el ajuste automatico del motor Texto deliberadamente largo para forzar el desbordamiento de la diapositiva y probar el ajuste automatico del motor"
+    },
+    {
+     "title": "Pista",
+     "body": "Texto deliberadamente largo para forzar el desbordamiento de la diapositiva y probar el ajuste automatico del motor Texto deliberadamente largo para forzar el desbordamiento de la diapositiva y probar el ajuste automatico del motor"
+    },
+    {
+     "title": "Pista",
+     "body": "Texto deliberadamente largo para forzar el desbordamiento de la diapositiva y probar el ajuste automatico del motor Texto deliberadamente largo para forzar el desbordamiento de la diapositiva y probar el ajuste automatico del motor"
+    },
+    {
+     "title": "Pista",
+     "body": "Texto deliberadamente largo para forzar el desbordamiento de la diapositiva y probar el ajuste automatico del motor Texto deliberadamente largo para forzar el desbordamiento de la diapositiva y probar el ajuste automatico del motor"
+    },
+    {
+     "title": "Pista",
+     "body": "Texto deliberadamente largo para forzar el desbordamiento de la diapositiva y probar el ajuste automatico del motor Texto deliberadamente largo para forzar el desbordamiento de la diapositiva y probar el ajuste automatico del motor"
+    }
+   ]
+  }
+ ]
+}

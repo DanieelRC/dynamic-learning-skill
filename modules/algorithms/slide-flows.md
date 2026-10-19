@@ -13,7 +13,7 @@ Keep decks short: 10–14 slides each. One idea per slide, with at most 4–5 bu
 | 5 | `interview` | clarifying questions to ask the interviewer (duplicates? empty input? sorted? return format?) |
 | 6 | `idea` | the brute-force idea in 3 bullets plus a `callout` on the key detail |
 | 7 | `trace` | animated walk on the small example (`sourceFile` + `framesFile`) |
-| 8 | `code` | the listing with 3–5 `notes` on line ranges |
+| 8 | `code` | the listing with 3–5 `notes` on line ranges, each note ≤ 100 characters (one idea) |
 | 9 | `complexity` | time and space with a *why* for each, plus `ops` |
 | 10 | `bullets` "Why isn't it enough?" | the bottleneck, named precisely; the bridge to the next idea |
 | 11 | `quiz` | 1 question on the subtle detail (4 options, one correct, with an explanation) |
@@ -28,7 +28,7 @@ Keep decks short: 10–14 slides each. One idea per slide, with at most 4–5 bu
 | 3 | `pattern` | how to **recognize** the pattern (signals) plus a `code` template and a `callout` on where else it appears |
 | 4 | `diagram` | the key insight as one static picture (`viz`) with `lead` and `caption` |
 | 5 | `trace` | the animated walk (same example as brute force, when possible) |
-| 6 | `code` | annotated listing |
+| 6 | `code` | annotated listing (3–5 notes, ≤ 100 characters each) |
 | 7 | `bullets` | edge cases and what the code does with each |
 | 8 | `complexity` | time and space with explanations |
 | 9 | `compare` | every approach so far, with the current one marked `current: true` |

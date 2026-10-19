@@ -75,7 +75,8 @@ python3 <skill>/scripts/build_deck.py 01-brute-force.json ../01-brute-force.html
 node <skill>/scripts/snapshot.cjs ../01-brute-force.html /tmp/dl/snap-01
 ```
 
-Fix every validation error and every LAYOUT warning, then open the PNGs of the trace slides and any
+Fix every validation error and warning, and every LAYOUT warning. `auto-fit: …` counts too: it means the
+engine had to shrink or collapse text, so shorten it at the source. Re-run until both commands are clean, then open the PNGs of the trace slides and any
 dense slide with the Read tool. Check four things:
 - the highlighted line matches the diagram;
 - nothing is clipped;

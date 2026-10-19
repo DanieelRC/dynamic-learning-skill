@@ -57,9 +57,8 @@ body {
 /* Presentation chrome lives outside the slide design system */
 .deck-controls {
     position: fixed;
-    left: 50%;
-    bottom: 18px;
-    transform: translateX(-50%);
+    right: 18px;
+    top: 18px;
     z-index: 1000;
 }
 

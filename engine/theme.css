@@ -318,10 +318,13 @@ a.btn { text-decoration: none; display: inline-block; }
 
 /* -------- Code walkthrough (annotated code) -------- */
 .walk { display: grid; grid-template-columns: 1.55fr 1fr; gap: 40px; flex: 1; min-height: 0; }
-.walk .notes { display: flex; flex-direction: column; gap: 18px; overflow: hidden; }
+.walk .notes { display: flex; flex-direction: column; gap: 18px; overflow: hidden; position: relative; scroll-behavior: smooth; min-height: 0; --note-fs: 27px; }
+.walk .notes.compact { gap: 10px; }
+.walk .notes.compact .note { padding: 12px 22px; }
+.walk .notes.compact .note:not(.active) > span:last-child { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 .walk .note {
     padding: 20px 26px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface);
-    font-size: 27px; color: var(--ink-2); opacity: 0.45; transition: all 0.3s ease;
+    font-size: var(--note-fs); line-height: 1.38; color: var(--ink-2); opacity: 0.45; transition: all 0.3s ease; flex: none;
 }
 .walk .note .lines { font-family: var(--font-mono); font-size: 20px; color: var(--muted); display: block; margin-bottom: 6px; }
 .walk .note.active { opacity: 1; border-color: rgba(245, 184, 61, 0.6); background: linear-gradient(90deg, var(--accent-soft), transparent), var(--surface); color: var(--ink); }
@@ -552,3 +555,10 @@ body:hover .deck-controls { opacity: 0.9; }
 .diagram-body .side .lead { font-size: 34px; }
 .diagram-body .viz { padding: 32px 36px; min-height: 0; overflow: hidden; }
 .diagram-body.wide { grid-template-columns: 1fr; }
+
+/* Hints that do not fit: older open hints collapse to one line */
+.hints.compact { gap: 10px; }
+.hints.compact .hint { padding: 10px 24px; }
+.hints.compact .hint.open:not(.latest) .content > span:last-child { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.hints.compact .hint.open:not(.latest) .content .title { display: inline; margin-right: 12px; }
+.hints.compact .hint.open:not(.latest) .content { display: flex; align-items: baseline; }

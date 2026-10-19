@@ -67,7 +67,13 @@ def validate(spec):
             n_lines = len(str(s["source"]).rstrip().split("\n"))
             if n_lines > 32:
                 warnings.append(f"{where}: {n_lines} code lines; >32 gets small. Trim comments or split.")
-            for j, n in enumerate(s.get("notes", []), 1):
+            notes = s.get("notes", [])
+            note_chars = sum(len(str(n.get("text", ""))) for n in notes)
+            if len(notes) > 5 or note_chars > 480:
+                warnings.append(f"{where}: {len(notes)} notes / {note_chars} chars; they will not fit at full size. Keep <= 5 notes, <= 100 chars each")
+            for j, n in enumerate(notes, 1):
+                if len(str(n.get("text", ""))) > 130:
+                    warnings.append(f"{where} note {j}: {len(str(n['text']))} chars; keep it under ~100")
                 for ln in ([n.get("lines")] if isinstance(n.get("lines"), int) else n.get("lines", [])):
                     if not 1 <= ln <= n_lines:
                         errors.append(f"{where} note {j}: line {ln} outside 1..{n_lines}")

@@ -22,6 +22,11 @@
     const SPEED = Math.max(0.25, parseFloat(params.get('speed') || '1') || 1);
 
     const readMs = (text, min) => Math.max(min || 2200, Math.min(12000, 1400 + String(text || '').length * 42)) / SPEED;
+    // Height the slide content needs, from layout offsets: unaffected by entrance-animation transforms.
+    // Call it with zoom cleared (zoom distorts offsets).
+    const contentNeed = (inner) => Math.max(0, ...Array.from(inner.children).map((k) => k.offsetTop + k.offsetHeight));
+    const unzoom = (inner) => Array.from(inner.children).forEach((k) => { k.style.zoom = ''; });
+
     const diffClass = (d) => String(d || '').toLowerCase().replace(/[^a-z]/g, '');
 
     /* ---------- slide frame ---------- */
@@ -176,9 +181,27 @@
                 el('span', { html: md(n.text) })
             ]);
         });
+        const notesEl = el('div.notes', {}, noteEls);
         inner.appendChild(notes.length
-            ? el('div.walk.reveal', {}, [body, el('div.notes', {}, noteEls)])
+            ? el('div.walk.reveal', {}, [body, notesEl])
             : el('div.reveal', { style: { flex: '1', minHeight: '0' } }, [body]));
+
+        // Notes must always fit: shrink the text, then collapse inactive notes, and keep the active one in view
+        const over = () => notesEl.scrollHeight > notesEl.clientHeight + 1;
+        function fitNotes(k) {
+            if (!notes.length || !notesEl.clientHeight) return;
+            notesEl.classList.remove('compact');
+            let fs = 27;
+            notesEl.style.setProperty('--note-fs', fs + 'px');
+            while (over() && fs > 21) notesEl.style.setProperty('--note-fs', --fs + 'px');
+            const compact = over();
+            notesEl.classList.toggle('compact', compact);
+            section.dataset.autofitNotes = compact ? 'notes compacted to one line each (too much note text)' : (fs < 27 ? 'notes shrunk to ' + fs + 'px' : '');
+            const a = noteEls[k];
+            if (!a) { notesEl.scrollTop = 0; return; }
+            if (a.offsetTop + a.offsetHeight > notesEl.scrollTop + notesEl.clientHeight) notesEl.scrollTop = a.offsetTop + a.offsetHeight - notesEl.clientHeight;
+            if (a.offsetTop < notesEl.scrollTop) notesEl.scrollTop = a.offsetTop;
+        }
 
         const offset = s.spoiler ? 1 : 0;
         const stepper = {
@@ -191,6 +214,7 @@
                 code.classList.toggle('focus', k >= 0);
                 code.lines.forEach((ln) => ln.classList.remove('active'));
                 noteEls.forEach((n, j) => n.classList.toggle('active', j === k));
+                fitNotes(k);
                 if (k >= 0) {
                     const ls = [].concat(notes[k].lines || []);
                     const [a, b] = [ls[0], ls[ls.length - 1] || ls[0]];
@@ -199,7 +223,7 @@
             },
             dwell(i) { return i === 0 ? readMs(s.source, 3500) * 0.6 : readMs((notes[i - offset - 1] || {}).text, 2600); }
         };
-        return { section, stepper: stepper.steps > 1 ? stepper : null };
+        return { section, stepper: stepper.steps > 1 ? stepper : null, onEnter: () => fitNotes(stepper.at - offset - 1) };
     };
 
     /* ----- trace: code + animated diagram, synced line by line ----- */
@@ -373,7 +397,17 @@
         inner.appendChild(list);
         const stepper = {
             steps: hints.length + 1, at: 0,
-            set(i) { this.at = i; hints.forEach((h, j) => h.node.classList.toggle('open', j < i)); },
+            set(i) {
+                this.at = i;
+                hints.forEach((h, j) => { h.node.classList.toggle('open', j < i); h.node.classList.toggle('latest', j === i - 1); });
+                // Too much text: earlier hints collapse to one line, the newest stays complete
+                list.classList.remove('compact');
+                const inner = section.querySelector('.slide-inner');
+                unzoom(inner);
+                const compact = contentNeed(inner) > inner.clientHeight + 2;
+                list.classList.toggle('compact', compact);
+                section.dataset.autofitNotes = compact ? 'earlier hints collapsed to one line (too much hint text)' : '';
+            },
             dwell(i) { return i === 0 ? 2500 / SPEED : readMs(hints[i - 1].text, 3500); }
         };
         return { section, stepper };
@@ -437,6 +471,9 @@
             this.scale();
             window.addEventListener('resize', () => this.scale());
             this.bind();
+            if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.refit());
+            // Buttons inside slides (reveal hint, show solution, quiz) change content: refit right after
+            this.stage.addEventListener('click', () => requestAnimationFrame(() => this.fit(this.slides[this.current])), true);
             const start = parseInt((location.hash || '').slice(1), 10);
             this.go(Number.isFinite(start) ? start - 1 : 0, 1);
             if (AUTOPLAY) { document.body.classList.add('autoplay'); this.autoplay(); }
@@ -457,20 +494,48 @@
             this.current = i;
             const r = this.slides[i];
             r.section.querySelectorAll('.op-row .fill').forEach((f) => { f.style.width = '0'; setTimeout(() => { f.style.width = f.dataset.w; }, 60); });
+            const inner = r.section.querySelector('.slide-inner');
+            if (inner) unzoom(inner);
             if (r.onEnter) r.onEnter();
             if (r.stepper) r.stepper.set(dir < 0 ? r.stepper.steps - 1 : 0);
+            this.fit(r);
             if (!AUTOPLAY) history.replaceState(null, '', '#' + (i + 1));
+        }
+
+        // Last line of defense against overflow: scale the slide's content blocks down (min 70%).
+        // It sets data-autofit so snapshot.cjs can report it and the text gets shortened at the source.
+        fit(r) {
+            const inner = r.section.querySelector('.slide-inner');
+            if (!inner) return;
+            unzoom(inner);
+            const kids = Array.from(inner.children);
+            const need = contentNeed(inner);
+            const avail = inner.clientHeight;
+            let z = 1;
+            // Under zoom, offsets come back in the zoomed elements' own units: visual height = offsets × z
+            while (z > 0.7 && (z === 1 ? need : contentNeed(inner) * z) > avail + 2) {
+                z = Math.round((z - 0.05) * 100) / 100;
+                kids.forEach((k) => { k.style.zoom = z; });
+            }
+            if (z === 0.7 && contentNeed(inner) * z <= avail + 2) z = 0.7001;
+            r.section.dataset.autofitZoom = z < 1 ? 'content scaled to ' + Math.round(z * 100) + '%' + (z === 0.7 ? ' and STILL overflowing' : '') : '';
+        }
+
+        refit() {
+            const r = this.slides[this.current];
+            if (r.onEnter) r.onEnter();
+            this.fit(r);
         }
 
         next() {
             const r = this.slides[this.current];
-            if (r.stepper && r.stepper.at < r.stepper.steps - 1) return r.stepper.set(r.stepper.at + 1);
+            if (r.stepper && r.stepper.at < r.stepper.steps - 1) { r.stepper.set(r.stepper.at + 1); return this.fit(r); }
             if (this.current < this.total - 1) this.go(this.current + 1, 1);
         }
 
         prev() {
             const r = this.slides[this.current];
-            if (r.stepper && r.stepper.at > 0) return r.stepper.set(r.stepper.at - 1);
+            if (r.stepper && r.stepper.at > 0) { r.stepper.set(r.stepper.at - 1); return this.fit(r); }
             if (this.current > 0) this.go(this.current - 1, -1);
         }
 
@@ -514,7 +579,7 @@
                 this.go(i, 1);
                 const r = this.slides[i];
                 if (r.stepper) {
-                    for (let s = 0; s < r.stepper.steps; s++) { r.stepper.set(s); await wait(r.stepper.dwell(s)); }
+                    for (let s = 0; s < r.stepper.steps; s++) { r.stepper.set(s); this.fit(r); await wait(r.stepper.dwell(s)); }
                 } else {
                     await wait(readMs(r.section.querySelector('.slide-inner').textContent, 3200));
                 }

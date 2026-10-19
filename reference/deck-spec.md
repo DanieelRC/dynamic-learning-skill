@@ -73,6 +73,17 @@ All text fields accept: `` `code` ``, `**bold**`, `*em*` (cyan), `==mark==`, `[l
 - Recommended: generate frames with `scripts/tracekit.py` (`framesFile`), not by hand.
 - Limits: up to 32 code lines and 40 frames per trace (the validator warns earlier).
 
+## Fitting on screen
+
+Everything is laid out on a fixed 1920×1080 stage. When text does not fit, the engine protects the slide:
+- code notes shrink, then the inactive ones collapse to one line, and the active note is always kept in view;
+- open hints collapse except the newest one;
+- any other slide scales its content down to 70% at most.
+
+Each of these sets an `auto-fit` LAYOUT warning in `snapshot.cjs`. Treat that as a bug in the spec and
+shorten the text. Budgets: code notes ≤ 5 × 100 characters, bullets ≤ 5 × 90, hints ≤ 5 × 140.
+`build_deck.py` warns about long notes before you even build.
+
 ## Viewer controls
 
 → / space / Enter: next step or slide · ← back · `P` play or pause the trace · `F` full screen ·

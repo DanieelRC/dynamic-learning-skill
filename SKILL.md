@@ -95,8 +95,10 @@ The deck format is documented in `reference/deck-spec.md` and the diagram compon
    frame state. Line numbers must point at the displayed listing.
 3. **One visual style.** Never add CSS or change the theme per problem. The engine and `engine/theme.css`
    are the design system.
-4. **Validate and look.** `build_deck.py` must pass with no errors. Run `snapshot.cjs`, fix every
-   LAYOUT warning (shorten text, split slides, use a smaller example) and open the PNGs of the trace slides.
+4. **Validate and look.** `build_deck.py` must pass with no errors or warnings. Run `snapshot.cjs`; it checks
+   **every step** of every slide. Fix every LAYOUT warning, including `auto-fit` ones: the engine shrank or
+   collapsed text to keep it on screen, which means the text is too long. Shorten it, split the slide, or use a
+   smaller example, then re-run until it is clean and open the PNGs of the trace slides.
    If Playwright is not installed, say so and ask whether to install it (`npm i -g playwright && npx playwright install chromium`)
    rather than skipping QA silently.
 5. **Interview focus.** Every solution deck shows how to recognize the pattern, the constraints → target
